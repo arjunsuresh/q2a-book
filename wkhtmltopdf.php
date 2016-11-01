@@ -195,7 +195,8 @@
 				'"'.$this->cmd.'"'
 				.(($this->copies>1)?' --copies '.$this->copies:'')			      // number of copies
 				.' --orientation '.$this->orient								// orientation
-				.' --page-size '.$this->size								    // page size
+				.' --page-size '.$this->size								    // delay for mathjax rendering
+				.' --javascript-delay 3625000'								    // page size
 				.($this->toc?' --toc':'')									       // table of contents
 				.($this->grayscale?' --grayscale':'')						   // grayscale
 				.(($this->title!='')?' --title "'.$this->title.'"':'')		  // title

@@ -29,6 +29,8 @@
 		
 		qa_register_plugin_phrases('qa-book-lang-*.php', 'book');
 
+		require 'util-book.php';
+
 
 		function qa_book_plugin_createBook($return=false) {
 
@@ -39,7 +41,8 @@
 			$book = str_replace('[css]',qa_opt('book_plugin_css'),$book);
 			$book = str_replace('[front]',qa_opt('book_plugin_template_front'),$book);
 			$book = str_replace('[back]',qa_opt('book_plugin_template_back'),$book);			
-
+			$shuffle = true;
+			$shuffle = false;
 			$iscats = qa_opt('book_plugin_cats');
 
 			// categories
@@ -60,6 +63,7 @@
 			// intro
 			
 			$intro = qa_lang('book/intro');
+			$ack = qa_lang('book/ack');
 			
 			$intro = str_replace('[sort_questions]',qa_lang('book/'.(qa_opt('book_plugin_sort_q') == 0?'sort_upvotes':'sort_date')),$intro);
 			$intro = str_replace('[sort_categories]',$iscats?qa_lang('book/sort_categories'):'',$intro);
@@ -84,14 +88,17 @@
 			}
 			
 			$book = str_replace('[intro]',$intro,$book);
+			$book = str_replace('[ack]',$ack,$book);
 
 			    
 			$tocout = '';
 			$qout = '';
 			
+				$ccount=0;
 			foreach($cats as $cat) {
-
+				$qcount=0;
 				$incsql = '';
+				$anssql = 'ans.type = \'A\' ';
 				$sortsql = '';
 				
 				$toc = '';
@@ -106,15 +113,27 @@
 					$incsql .= ' AND qs.selchildid=ans.postid';
 					
 				if(qa_opt('book_plugin_req_abest'))
-					$sortsql.=', ans.netvotes DESC'; // get all, limit later with break
+					$sortsql.=',  ans.netvotes DESC'; // get all, limit later with break
 					
 				if(qa_opt('book_plugin_req_qv'))
 					$incsql .= ' AND qs.netvotes >= '.(int)qa_opt('book_plugin_req_qv_no');
 
 				if(qa_opt('book_plugin_req_av'))
-					$incsql .= ' AND ans.netvotes >= '.(int)qa_opt('book_plugin_req_av_no');
-				
-				$selectspec="SELECT qs.postid AS postid, BINARY qs.title AS title, BINARY qs.content AS content, qs.format AS format, qs.netvotes AS netvotes, BINARY ans.content AS acontent, ans.format AS aformat, ans.userid AS auserid, ans.netvotes AS anetvotes FROM ^posts AS qs, ^posts AS ans WHERE qs.type='Q' AND ans.type='A' AND ans.parentid=qs.postid".($iscats?" AND qs.categoryid=".$cat['categoryid']." ":"").$incsql." ".$sortsql;
+					$anssql .= ' AND ans.netvotes >= '.(int)qa_opt('book_plugin_req_av_no');
+				$filter = true;
+				$skipanswers = true;
+			//	$skipanswers = false;
+				//$filter = false;
+				if($filter){
+					$incsql .= ' and (qs.title  like \'GATE%\' || qs.title like \'TIFR%\')';
+				//	$incsql .= ' and (qs.title not  like \'GATE%\' and qs.title not like \'TIFR%\')';
+				}
+				if($skipanswers){
+					$anssql .= ' AND  ans.postid < 0 '; 
+				}
+				$sortsql.=',  ans.netvotes DESC'; // get all, limit later with break
+					
+				$selectspec="SELECT qs.postid AS postid, BINARY qs.title AS title, BINARY qs.content AS content, qs.format AS format, qs.netvotes AS netvotes, qs.tags as tags, qs.selchildid as selected, ans.postid as apostid, BINARY ans.content AS acontent, ans.format AS aformat, ans.userid AS auserid, ans.netvotes AS anetvotes FROM ^posts  qs left outer join ^posts  ans on qs.postid=ans.parentid and  ".$anssql." where qs.type='Q' ".($iscats?" AND qs.categoryid=".$cat['categoryid']." ":"AND qs.categoryid NOT IN  (62,63)") . $incsql." ".$sortsql;
 				
 				$qs = qa_db_read_all_assoc(
 					qa_db_query_sub(
@@ -125,71 +144,134 @@
 				if(empty($qs)) // no questions in this category
 					continue;
 				
+				$ccount++;
 				$q2 = array();
 				foreach($qs as $q) { // group by questions
 					$q2['q'.$q['postid']][] = $q;
 				}
-
 				
+				//usort($q2,array($this,  "mysort"));
+				if(!$shuffle)
+					usort($q2, "mysort");
+				else
+				{
+					//shuffle($q2);
+				}
+				$oldmint='';	
 				foreach($q2 as $qs) {
-					
+				if(skiptags($qs[0]))
+					continue;	
+				usort($qs, "mysortanswers");
 					// toc entry
-					
-					$toc.=str_replace('[qlink]','<a href="#question'.$qs[0]['postid'].'">'.$qs[0]['title'].'</a>',qa_opt('book_plugin_template_toc'));
+					$mint = mintag($qs[0]);
+					if($mint !== $oldmint){
+						if($mint !== '' && !$shuffle)
+						{
+						$toc.=str_replace('[qlink]','<a href="#question'.$qs[0]['postid'].'">'.$mint.'</a>',qa_opt('book_plugin_template_toc'));
+						}
+						else {
+					//		$toc.=str_replace('[qlink]','<a href="#question'.$qs[0]['postid'].'">'.$qs[0]['title'].'</a>',qa_opt('book_plugin_template_toc'));
+						}
+						$oldmint = $mint;
+					}
 
 					// answer html
 					
 					$as = '';
 					$nv = false;
+					$noanswer = true;
 					foreach($qs as $idx => $q) {
 						if(qa_opt('book_plugin_req_abest') && qa_opt('book_plugin_req_abest_max') && $idx >= qa_opt('book_plugin_req_abest_max'))
 							break;
 						if($nv !== false && qa_opt('book_plugin_req_abest') && $nv != $q['anetvotes']) // best answers only
 							break;
+					/*arjun*/
+						if($idx && ($q['anetvotes'] == 0))	
+							break;
 						$acontent = '';
 						if(!empty($q['acontent'])) {
 							$viewer=qa_load_viewer($q['acontent'], $q['aformat']);
 							$acontent = $viewer->get_html($q['acontent'], $q['aformat'], array());
+						$noanswer = false;
 						}
-						
 						$a = str_replace('[answer]',$acontent,qa_opt('book_plugin_template_answer'));
-						
-						$a = str_replace('[answerer]',qa_get_user_name($q['auserid']),$a);
-
+						if($q['selected'] == $q['apostid'] && $q['apostid'] !== NULL){
+							$a = str_replace('[best]', 'bestanswer', $a);
+							$a = str_replace('[bestanswer]', 'bestanswercontent', $a);
+							$a = str_replace('[beforebest]', '<div class="tick"> <button disabled class="qa-a-select-button"><span class="fa fa-check"></span></button></div><div class="best-text">Selected Answer</div>', $a);
+							$a = str_replace('[afterbest]', '', $a);
+						}
+						else{
+							$a = str_replace('[best]', '', $a);
+							$a = str_replace('[bestanswer]', '', $a);
+							$a = str_replace('[beforebest]', '', $a);
+							$a = str_replace('[afterbest]', '', $a);
+						}
+						if($q['auserid'] !== NULL)	
+							$a = str_replace('[answerer]',qa_get_user_name($q['auserid']),$a);
+						else {
+							$a = str_replace('[answerer]','',$a);
+						}
+						$nv = $q['anetvotes'];
+						if($q['anetvotes'] !== NULL)	
+							$a = str_replace('[votes]',$nv,$a);
+						else {
+							$a = str_replace('[votes]','',$a);
+						}
+						$res = qa_db_query_sub("select points from ^userpoints where userid=#", $q['auserid']);
+						$points = qa_db_read_one_value($res, true);
+						if($q['auserid'] !== NULL)	
+							$a = str_replace('[upoints]',trim($points),$a);
+						else {
+							$a = str_replace('[upoints]','',$a);
+						}
 						$as .= $a;
 						
-						$nv = $q['anetvotes'];
 					}
-					
 					// question html
-					
 					$qcontent = '';
 					if(!empty($q['content'])) {
+					$qcount++;
 						$viewer=qa_load_viewer($q['content'], $q['format']);
 						$qcontent = $viewer->get_html($q['content'], $q['format'], array());
 					}
-					
-					$oneq = str_replace('[question-title]',$q['title'],qa_opt('book_plugin_template_question'));
+					$tagshtml='';
+					$tags = qa_tagstring_to_tags($q['tags']);
+					$mint=mintag($q);
+					foreach ($tags as $tag)
+					{
+				
+						$tagshtml.="<li class=\"qa-q-view-tag-item\"> <a href=\"http://gateoverflow.in/tag/".$tag."\"    class=\"qa-tag-link\">".$tag." </a></li>";
+					}
+					if($mint !== '')
+						$mint.=": ";
+					$number="<div class=\"number\">".$ccount.".".$qcount."</div>";	
+					$titleright="<div class=\"title-right\"><a href=\"http://gateoverflow.in/".$q['postid']."\">gateoverflow.in/".$q['postid']."</a></div>";
+					$oneq = str_replace('[question-title]',$number.$mint.$q['title'].$titleright,qa_opt('book_plugin_template_question'));
 					$oneq = str_replace('[qanchor]','question'.$q['postid'],$oneq);
 					$oneq = str_replace('[qurl]',qa_html(qa_q_request($q['postid'],$q['title'])),$oneq);
 					$oneq = str_replace('[question]',$qcontent,$oneq);
 					 // output with answers 
-					 
+					 $oneq = str_replace('[tags]', $tagshtml, $oneq);
+					if($skipanswers || $noanswer)
+					$qhtml .= str_replace('[answers]','',$oneq);
+					else
 					$qhtml .= str_replace('[answers]',$as,$oneq);
 				}
 				if($iscats) {
-					$tocout .= '<li><a href="#cat'.$cat['categoryid'].'" class="toc-cat">'.$cat['title'].'</a><ul class="toc-ul">'.$toc.'</ul></li>';
+					$tocout .= '<li><a href="#cat'.$cat['categoryid'].'" onclick="toggle(\'cat'.$cat['categoryid'].'Details\')" class="toc-cat">'.$cat['title'].'</a><span id="cat'.$cat['categoryid'].'Details"> <ul class="toc-ul">'.$toc.'</ul></li>';
 
 					// todo fix category link
-					
+					$catnumber="<div class=\"number\">$ccount</div>";
 					$catout = str_replace('[cat-url]',qa_path_html('questions/'.qa_category_path_request($navcats, $cat['categoryid'])),qa_opt('book_plugin_template_category'));
 					$catout = str_replace('[cat-anchor]','cat'.$cat['categoryid'],$catout);
-					$catout = str_replace('[cat-title]',$cat['title'],$catout);
+					$catout = str_replace('[cat-title]',$catnumber.$cat['title'],$catout);
 					$catout = str_replace('[questions]',$qhtml,$catout);
 					$qout .= $catout;
 				}
 				else {
-					$tocout .= '<ul class="toc-ul">'.$toc.'</ul>';
+					if(!$shuffle)
+						$tocout .= '<ul class="toc-ul">'.$toc.'</ul>';
 					$catout = str_replace('[questions]',$qhtml,qa_opt('book_plugin_template_questions'));
 					$qout .= $catout;
 				}
@@ -243,6 +325,7 @@
 
 			error_log('Q2A PDF Book Created on '.date('M j, Y \a\t H\:i\:s'));
 		}
+
 		function qa_get_user_name($uid) {
 
 			$handles = qa_userids_to_handles(array($uid));
@@ -256,7 +339,7 @@
 			else {
 				$name = qa_db_read_one_value(
 					qa_db_query_sub(
-						'SELECT title AS name FROM ^userprofile '.
+						'SELECT content AS name FROM ^userprofile '.
 						'WHERE userid=# AND title=$',
 						$uid, 'name'
 					),
@@ -266,7 +349,7 @@
 			if(!@$name)
 				$name = $handle;
 
-			return strlen($handle) ? ('<A HREF="'.qa_path_html('user/'.$handle).
+			return strlen($handle) ? ('<A HREF="'.qa_path_absolute('user/'.$handle).
 				'" CLASS="qa-user-link">'.qa_html($name).'</A>') : 'Anonymous';
 		}
 
