@@ -12,6 +12,36 @@
 				return 5;
 			case 'book_plugin_req_av_no':
 				return 5;
+			case 'book_plugin_enable_custom_filter_1':
+				return 0;
+			case 'book_plugin_enable_custom_filter_2':
+				return 0;
+			case 'book_plugin_enable_custom_filter_3':
+				return 0;
+			case 'book_plugin_enable_custom_filter_4':
+				return 0;
+			case 'book_plugin_enable_custom_filter_5':
+				return 0;
+			case 'book_plugin_custom_filter_1':
+				return "where qs.tags like 'gate%'";
+			case 'book_plugin_custom_filter_2':
+				return "where qs.tags like 'gate%'";
+			case 'book_plugin_custom_filter_3':
+				return "where qs.tags like 'gate%'";
+			case 'book_plugin_custom_filter_4':
+				return "where qs.tags like 'gate%'";
+			case 'book_plugin_custom_filter_5':
+				return "where qs.tags like 'gate%'";
+			case 'book_plugin_custom_filter_1_desc':
+				return "The questions included are restricted to these conditions";
+			case 'book_plugin_custom_filter_2_desc':
+				return "The questions included are restricted to these conditions";
+			case 'book_plugin_custom_filter_3_desc':
+				return "The questions included are restricted to these conditions";
+			case 'book_plugin_custom_filter_4_desc':
+				return "The questions included are restricted to these conditions";
+			case 'book_plugin_custom_filter_5_desc':
+				return "The questions included are restricted to these conditions";
 			case 'book_plugin_refresh_last':
 				return time();
 			case 'book_plugin_refresh_hours':
@@ -24,6 +54,12 @@
 				return 'book';
 			case 'book_plugin_request_pdf':
 				return 'book.pdf';
+			case 'book_plugin_show_a':
+				return '1';
+			case 'book_plugin_intro':
+				return 'This book was created programatically by [site-title] on [date].';
+			case 'book_plugin_ack':
+				return 'Thanks to all the contributors of [site-title].';
 			case 'book_plugin_css':
 				return file_get_contents(dirname(__FILE__).'/book.css');
 			case 'book_plugin_template':
@@ -52,6 +88,18 @@
 		{
 			return ($template!='admin');
 		}	   
+
+		function getcategoryoptions($selected)
+		{
+			$cats = array();
+			$option='<option value="0">Select</option>';
+			$navcats = qa_book_getallcats($cats, true);
+			foreach($cats as $cat)
+			{
+				$option .= '<option '.(in_array($cat['categoryid'], $selected)? 'selected': '').' value="'.$cat['categoryid'].'">'.$cat['title'].'</option>';
+			}
+			return $option;
+		}
 			
 		function admin_form(&$qa_content)
 		{					   
@@ -62,13 +110,34 @@
 				if (qa_clicked('book_plugin_process') || qa_clicked('book_plugin_save')) {
 			
 					qa_opt('book_plugin_active',(bool)qa_post_text('book_plugin_active'));
+					qa_opt('book_plugin_shuffle',(bool)qa_post_text('book_plugin_shuffle'));
 					
 					qa_opt('book_plugin_cats',(bool)qa_post_text('book_plugin_cats'));
-					qa_opt('book_plugin_catex',qa_post_text('book_plugin_catex'));
+					qa_opt('book_plugin_catex', implode(",", $_POST['book_plugin_catex']));
+					
+					qa_opt('book_plugin_enable_custom_filter1',(bool)qa_post_text('book_plugin_enable_custom_filter1'));
+					qa_opt('book_plugin_custom_filter1',qa_post_text('book_plugin_custom_filter1'));
+					qa_opt('book_plugin_custom_filter1_desc',qa_post_text('book_plugin_custom_filter1_desc'));
+					qa_opt('book_plugin_enable_custom_filter2',(bool)qa_post_text('book_plugin_enable_custom_filter2'));
+					qa_opt('book_plugin_custom_filter2',qa_post_text('book_plugin_custom_filter2'));
+					qa_opt('book_plugin_custom_filter2_desc',qa_post_text('book_plugin_custom_filter2_desc'));
+					qa_opt('book_plugin_enable_custom_filter3',(bool)qa_post_text('book_plugin_enable_custom_filter3'));
+					qa_opt('book_plugin_custom_filter3',qa_post_text('book_plugin_custom_filter3'));
+					qa_opt('book_plugin_custom_filter3_desc',qa_post_text('book_plugin_custom_filter3_desc'));
+					qa_opt('book_plugin_enable_custom_filter4',(bool)qa_post_text('book_plugin_enable_custom_filter4'));
+					qa_opt('book_plugin_custom_filter4',qa_post_text('book_plugin_custom_filter4'));
+					qa_opt('book_plugin_custom_filter4_desc',qa_post_text('book_plugin_custom_filter4_desc'));
+					qa_opt('book_plugin_enable_custom_filter5',(bool)qa_post_text('book_plugin_enable_custom_filter5'));
+					qa_opt('book_plugin_custom_filter5',qa_post_text('book_plugin_custom_filter5'));
+					qa_opt('book_plugin_custom_filter5_desc',qa_post_text('book_plugin_custom_filter5_desc'));
 					
 					qa_opt('book_plugin_sort_q',(int)qa_post_text('book_plugin_sort_q'));
 					
+					qa_opt('book_plugin_show_a',(bool)qa_post_text('book_plugin_show_a'));
+					qa_opt('book_plugin_push_a',(bool)qa_post_text('book_plugin_push_a'));
+					
 					qa_opt('book_plugin_req_sel',(bool)qa_post_text('book_plugin_req_sel'));
+					qa_opt('book_plugin_req_ans',(bool)qa_post_text('book_plugin_req_ans'));
 					qa_opt('book_plugin_req_abest',(bool)qa_post_text('book_plugin_req_abest'));
 					qa_opt('book_plugin_req_abest_max',(int)qa_post_text('book_plugin_req_abest_max'));
 					qa_opt('book_plugin_req_qv',(bool)qa_post_text('book_plugin_req_qv'));
@@ -91,7 +160,13 @@
 					qa_opt('book_plugin_request',qa_post_text('book_plugin_request'));
 					qa_opt('book_plugin_request_pdf',qa_post_text('book_plugin_request_pdf'));
 					
+					qa_opt('book_plugin_prefix',(bool)qa_post_text('book_plugin_prefix'));
+					qa_opt('book_plugin_specialtags',qa_post_text('book_plugin_specialtags'));
+					
 					qa_opt('book_plugin_css',qa_post_text('book_plugin_css'));
+					
+					qa_opt('book_plugin_ack',qa_post_text('book_plugin_ack'));
+					qa_opt('book_plugin_intro',qa_post_text('book_plugin_intro'));
 					
 					qa_opt('book_plugin_template',qa_post_text('book_plugin_template'));
 					qa_opt('book_plugin_template_front',qa_post_text('book_plugin_template_front'));
@@ -124,10 +199,76 @@
 				'value' => qa_opt('book_plugin_active'),
 				'type' => 'checkbox',
 			);
-
+			$fields[] = array(
+				'label' => 'Shuffle Questions',
+				'tags' => 'NAME="book_plugin_shuffle"',
+				'value' => qa_opt('book_plugin_shuffle'),
+				'type' => 'checkbox',
+			);
 			$fields[] = array(
 				'type' => 'blank',
 			);
+			$fields[] = array(
+				'label' => 'Enable Custom Filter 1',
+				'tags' => 'NAME="book_plugin_enable_custom_filter1" onchange="if(this.checked) $(\'#book_plugin_custom_filter1_div\').show(); else $(\'#book_plugin_custom_filter1_div\').hide();"',
+				'value' => qa_opt('book_plugin_enable_custom_filter1'),
+				'type' => 'checkbox',
+			);
+			$fields[] = array(
+			'value' => '<div style="display:'.(qa_opt('book_plugin_enable_custom_filter1')?'block':'none').'" id="book_plugin_custom_filter1_div"><i>Custom query filter1 string</i><br/><input name="book_plugin_custom_filter1" id="book_plugin_custom_filter1" value="'.qa_opt('book_plugin_custom_filter1').'">
+<br/><i>Text to be added in Book</i><br/><textarea name="book_plugin_custom_filter1_desc"  rows="10" id="book_plugin_custom_filter1_desc">'.qa_opt('book_plugin_custom_filter1_desc').'</textarea>
+</div>',
+				'type' => 'static',
+			);
+			$fields[] = array(
+				'label' => 'Enable Custom Filter 2',
+				'tags' => 'NAME="book_plugin_enable_custom_filter2" onchange="if(this.checked) $(\'#book_plugin_custom_filter2_div\').show(); else $(\'#book_plugin_custom_filter2_div\').hide();"',
+				'value' => qa_opt('book_plugin_enable_custom_filter2'),
+				'type' => 'checkbox',
+			);
+			$fields[] = array(
+				'value' => '<div style="display:'.(qa_opt('book_plugin_enable_custom_filter2')?'block':'none').'" id="book_plugin_custom_filter2_div"><i>Custom query filter2 string</i><br/><input name="book_plugin_custom_filter2" id="book_plugin_custom_filter2" value="'.qa_opt('book_plugin_custom_filter2').'">
+<br/><i>Text to be added in Book</i><br/><textarea name="book_plugin_custom_filter2_desc"  rows="10" id="book_plugin_custom_filter2_desc">'.qa_opt('book_plugin_custom_filter2_desc').'</textarea>
+</div>',
+				'type' => 'static',
+			);
+			$fields[] = array(
+				'label' => 'Enable Custom Filter 3',
+				'tags' => 'NAME="book_plugin_enable_custom_filter3" onchange="if(this.checked) $(\'#book_plugin_custom_filter3_div\').show(); else $(\'#book_plugin_custom_filter3_div\').hide();"',
+				'value' => qa_opt('book_plugin_enable_custom_filter3'),
+				'type' => 'checkbox',
+			);
+			$fields[] = array(
+				'value' => '<div style="display:'.(qa_opt('book_plugin_enable_custom_filter3')?'block':'none').'" id="book_plugin_custom_filter3_div"><i>Custom query filter3 string</i><br/><input name="book_plugin_custom_filter3" id="book_plugin_custom_filter3" value="'.qa_opt('book_plugin_custom_filter3').'">
+<br/><i>Text to be added in Book</i><br/><textarea name="book_plugin_custom_filter3_desc"  rows="10" id="book_plugin_custom_filter3_desc">'.qa_opt('book_plugin_custom_filter3_desc').'</textarea>
+</div>',
+				'type' => 'static',
+			);
+			$fields[] = array(
+				'label' => 'Enable Custom Filter 4',
+				'tags' => 'NAME="book_plugin_enable_custom_filter4" onchange="if(this.checked) $(\'#book_plugin_custom_filter4_div\').show(); else $(\'#book_plugin_custom_filter4_div\').hide();"',
+				'value' => qa_opt('book_plugin_enable_custom_filter4'),
+				'type' => 'checkbox',
+			);
+			$fields[] = array(
+				'value' => '<div style="display:'.(qa_opt('book_plugin_enable_custom_filter4')?'block':'none').'" id="book_plugin_custom_filter4_div"><i>Custom query filter4 string</i><br/><input name="book_plugin_custom_filter4" id="book_plugin_custom_filter4" value="'.qa_opt('book_plugin_custom_filter4').'">
+<br/><i>Text to be added in Book</i><br/><textarea name="book_plugin_custom_filter4_desc"  rows="10" id="book_plugin_custom_filter4_desc">'.qa_opt('book_plugin_custom_filter4_desc').'</textarea>
+</div>',
+				'type' => 'static',
+			);
+			$fields[] = array(
+				'label' => 'Enable Custom Filter 5',
+				'tags' => 'NAME="book_plugin_enable_custom_filter5" onchange="if(this.checked) $(\'#book_plugin_custom_filter5_div\').show(); else $(\'#book_plugin_custom_filter5_div\').hide();"',
+				'value' => qa_opt('book_plugin_enable_custom_filter5'),
+				'type' => 'checkbox',
+			);
+			$fields[] = array(
+				'value' => '<div style="display:'.(qa_opt('book_plugin_enable_custom_filter5')?'block':'none').'" id="book_plugin_custom_filter5_div"><i>Custom query filter5 string</i><br/><input name="book_plugin_custom_filter5" id="book_plugin_custom_filter5" value="'.qa_opt('book_plugin_custom_filter5').'">
+<br/><i>Text to be added in Book</i><br/><textarea name="book_plugin_custom_filter5_desc"  rows="10" id="book_plugin_custom_filter5_desc">'.qa_opt('book_plugin_custom_filter5_desc').'</textarea>
+</div>',
+				'type' => 'static',
+			);
+
 			
 			$fields[] = array(
 				'label' => 'Sort By Categories',
@@ -136,10 +277,11 @@
 				'type' => 'checkbox',
 			);
 
-			
+			$exccat = $this->getcategoryoptions(explode(",",qa_opt('book_plugin_catex')));	
 			$fields[] = array(
-				'value' => '<span style="display:'.(qa_opt('book_plugin_cats')?'block':'none').'" id="book_plugin_cat_div"><i>Categories to exclude (comma seperated categoryid list):</i><br/><input name="book_plugin_catex" id="book_plugin_catex" value="'.qa_opt('book_plugin_catex').'"></span>',
+				'value' => '<span style="display:'.(qa_opt('book_plugin_cats')?'block':'none').'" id="book_plugin_cat_div"><i>Categories to exclude (multi-select with CTRL/CMD):</i><br/><select multiple name="book_plugin_catex[]" id="book_plugin_catex>" '.$exccat.'"</select></span>',
 				'type' => 'static',
+				'note' => 'Selecting a parent category excludes all child categories',
 			);
 			
 			$sort = array(
@@ -155,6 +297,19 @@
 				'options' => $sort,
 				'value' => @$sort[qa_opt('book_plugin_sort_q')],
 			);
+			$fields[] = array(
+				'label' => 'Include Answers',
+				'tags' => 'NAME="book_plugin_show_a"',
+				'value' => qa_opt('book_plugin_show_a'),
+				'type' => 'checkbox',
+			);
+			$fields[] = array(
+				'label' => 'Push Answers',
+				'note' => 'Moves answers from below question to the end of the Topic/Category',
+				'tags' => 'NAME="book_plugin_push_a"',
+				'value' => qa_opt('book_plugin_push_a'),
+				'type' => 'checkbox',
+			);
 
 			$fields[] = array(
 				'type' => 'blank',
@@ -169,6 +324,12 @@
 				'label' => 'Selected answers',
 				'tags' => 'NAME="book_plugin_req_sel"',
 				'value' => qa_opt('book_plugin_req_sel'),
+				'type' => 'checkbox',
+			);
+			$fields[] = array(
+				'label' => 'Answered Questions',
+				'tags' => 'NAME="book_plugin_req_ans"',
+				'value' => qa_opt('book_plugin_req_ans'),
 				'type' => 'checkbox',
 			);
 
@@ -261,6 +422,22 @@
 				'tags' => 'NAME="book_plugin_request"',
 				'value' => qa_opt('book_plugin_request'),
 			);
+			$fields[] = array(
+				'label' => 'Prefix Tag to Question Title',
+				'tags' => 'onclick="if(this.checked) $(\'#book_plugin_specialtags_div\').show(); else $(\'#book_plugin_specialtags_div\').hide();" NAME="book_plugin_prefix"',
+				'note' => 'Prefixes the most lightly used tag in tagstring to the Question title',	
+				'value' => qa_opt('book_plugin_prefix'),
+				'type' => 'checkbox',
+			);
+			$fields[] = array(
+				'tags' => 'NAME="book_plugin_specialtags"',
+				'value' => '<div id="book_plugin_specialtags_div" style="display:'.(qa_opt('book_plugin_prefix')?'block':'none').'"> 
+<p><i>Special Tags (comma separated)</i></p>
+<input type="textareas rows="10" value="'.  qa_opt('book_plugin_specialtags').'">
+<p><i>These tagnames won\'t be considered for Adding to Question Title Prefix</i></p>
+</div>',
+				'type' => 'static',
+			);
 
 			$fields[] = array(
 				'label' => 'Book PDF Permalink',
@@ -291,7 +468,7 @@
 				'tags' => 'NAME="book_plugin_template"',
 				'value' => qa_opt('book_plugin_template'),
 				'type' => 'textarea',
-				'rows' => '10',
+				'rows' => '20',
 			);
 			$fields[] = array(
 				'label' => 'Front Cover Template',
@@ -308,6 +485,22 @@
 				'value' => qa_opt('book_plugin_template_back'),
 				'type' => 'textarea',
 				'rows' => '10',
+			);
+			$fields[] = array(
+				'label' => 'Introduction',
+				'note' => '<i>intro.html</i>',
+				'tags' => 'NAME="book_plugin_intro"',
+				'value' => qa_opt('book_plugin_intro'),
+				'type' => 'textarea',
+				'rows' => '10',
+			);
+			$fields[] = array(
+				'label' => 'Acknowledgement',
+				'note' => '<i>ack.html</i>',
+				'tags' => 'NAME="book_plugin_ack"',
+				'value' => qa_opt('book_plugin_ack'),
+				'type' => 'textarea',
+				'rows' => '20',
 			);
 			$fields[] = array(
 				'label' => 'Table of Contents Template',
