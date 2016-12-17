@@ -64,12 +64,12 @@ function skiptags($question) {
                         return false;
                 }
                 function mysortanswers($a, $b) {
-                        if($a[selected] === $a[apostid])
+                        if($a['selected'] === $a['apostid'])
                                 return -1;
-                        if($b[selected] === $b[apostid] )
+                        if($b['selected'] === $b['apostid'] )
                                 return 1;
 
-                        return $b[anetvotes] - $a[anetvotes];
+                        return $b['anetvotes'] - $a['anetvotes'];
 
                 }
                 function mysort($c, $d){
@@ -81,9 +81,9 @@ function skiptags($question) {
                         if($mint === '' && $mintb === '')
                                 return 0;
                         if($mint === '')
-                                return 1;
-                        if($mintb === '')
                                 return -1;
+                        if($mintb === '')
+                                return 1;
                         return strcmp($mint, $mintb);
                 }
 ?>

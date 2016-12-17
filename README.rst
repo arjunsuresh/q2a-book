@@ -10,7 +10,7 @@ This is a plugin for **Question2Answer** that creates an html e-book of the site
 Features
 --------
 - fully customizable HTML template via admin/plugins
-- options for sorting and inclusion
+- options for sorting, inclusion exclusion filters, include/exclude answers
 - option for static or on-the-fly creation (static requires PHP to write to file)
 - option to create PDF file - requires wkhtmltopdf (see below)
 - optional widget for displaying download links in sidebar
@@ -22,7 +22,7 @@ Installation
 #. Get the source code for this plugin from github_, either using git_, or downloading directly:
 
    - To download using git, install git and then type 
-     ``git clone git://github.com/NoahY/q2a-book.git book``
+     ``git clone git://github.com/arjunsuresh/q2a-book.git book``
      at the command prompt (on Linux, Windows is a bit different)
    - To download directly, go to the `project page`_ and click **Download**
 
@@ -31,7 +31,7 @@ Installation
 .. _Question2Answer: http://www.question2answer.org/install.php
 .. _git: http://git-scm.com/
 .. _github:
-.. _project page: https://github.com/NoahY/q2a-book
+.. _project page: https://github.com/arjunsuresh/q2a-book
 
 ------------
 Static Files

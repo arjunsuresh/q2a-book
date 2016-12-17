@@ -9,9 +9,9 @@
 			case 'book_plugin_inc':
 				return 0;
 			case 'book_plugin_req_qv_no':
-				return 5;
+				return 2;
 			case 'book_plugin_req_av_no':
-				return 5;
+				return 2;
 			case 'book_plugin_enable_custom_filter_1':
 				return 0;
 			case 'book_plugin_enable_custom_filter_2':
@@ -433,7 +433,7 @@
 				'tags' => 'NAME="book_plugin_specialtags"',
 				'value' => '<div id="book_plugin_specialtags_div" style="display:'.(qa_opt('book_plugin_prefix')?'block':'none').'"> 
 <p><i>Special Tags (comma separated)</i></p>
-<input type="textareas rows="10" value="'.  qa_opt('book_plugin_specialtags').'">
+<textarea rows="10" name="book_plugin_specialtags">'. qa_opt('book_plugin_specialtags').'</textarea>
 <p><i>These tagnames won\'t be considered for Adding to Question Title Prefix</i></p>
 </div>',
 				'type' => 'static',
@@ -468,7 +468,7 @@
 				'tags' => 'NAME="book_plugin_template"',
 				'value' => qa_opt('book_plugin_template'),
 				'type' => 'textarea',
-				'rows' => '20',
+				'rows' => '10',
 			);
 			$fields[] = array(
 				'label' => 'Front Cover Template',
@@ -488,7 +488,6 @@
 			);
 			$fields[] = array(
 				'label' => 'Introduction',
-				'note' => '<i>intro.html</i>',
 				'tags' => 'NAME="book_plugin_intro"',
 				'value' => qa_opt('book_plugin_intro'),
 				'type' => 'textarea',
@@ -496,7 +495,6 @@
 			);
 			$fields[] = array(
 				'label' => 'Acknowledgement',
-				'note' => '<i>ack.html</i>',
 				'tags' => 'NAME="book_plugin_ack"',
 				'value' => qa_opt('book_plugin_ack'),
 				'type' => 'textarea',

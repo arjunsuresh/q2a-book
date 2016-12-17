@@ -1,17 +1,5 @@
 <?php
 
-/*              
-		Plugin Name: Book
-		Plugin URI: https://github.com/NoahY/q2a-book
-		Plugin Update Check URI: https://raw.github.com/NoahY/q2a-book/master/qa-plugin.php
-		Plugin Description: Makes boook from top questions and answers
-		Plugin Version: 0.8
-		Plugin Date: 2012-03-05
-		Plugin Author: NoahY
-		Plugin Author URI:                              
-		Plugin License: GPLv2                           
-		Plugin Minimum Question2Answer Version: 1.5
- */                      
 
 
 if (!defined('QA_VERSION')) { // don't allow this page to be requested directly from browser
@@ -20,8 +8,6 @@ if (!defined('QA_VERSION')) { // don't allow this page to be requested directly 
 }               
 
 qa_register_plugin_module('module', 'qa-book-admin.php', 'qa_book_admin', 'Book Export');
-
-//qa_register_plugin_layer('qa-book-layer.php', 'Book Layer');
 
 qa_register_plugin_overrides('qa-book-overrides.php');
 
@@ -67,7 +53,20 @@ function qa_book_plugin_createBook($return=false) {
 
 	// static replacements
 
+	$extras='';
+	if(qa_opt('qa-mathjax-enable'))
+	{
+		$extras.=  '<script  type="text/x-mathjax-config">'. qa_opt('qa-mathjax-config').'</script>';
+		$extras .= '<script  async type="text/javascript" src="'.qa_opt('qa-mathjax-url').'"></script>';
+	}
+	 if(qa_opt("qa-pretiffy-enable"))
+        {
+                $extras.='<script  async type="text/javascript" src="'.qa_opt('qa-pretiffy-url').'"></script>';
+        }
+
+
 	$book = str_replace('[css]',qa_opt('book_plugin_css'),$book);
+	$book = str_replace('[script]',$extras,$book);
 	$book = str_replace('[front]',qa_opt('book_plugin_template_front'),$book);
 	$book = str_replace('[back]',qa_opt('book_plugin_template_back'),$book);			
 
@@ -83,8 +82,6 @@ function qa_book_plugin_createBook($return=false) {
 
 	// intro
 
-	//$intro = qa_lang('book/intro');
-	//$ack = qa_lang('book/ack');
 	$intro = '<p>'.qa_opt('book_plugin_intro').'</p>';
 	$ack = '<p>'.qa_opt('book_plugin_ack').'</p>';
 
@@ -173,7 +170,7 @@ function qa_book_plugin_createBook($return=false) {
 		}
 		$sortsql.=',  ans.netvotes DESC'; // get all, limit later with break
 
-		$selectspec="SELECT qs.postid AS postid, BINARY qs.title AS title, BINARY qs.content AS content, qs.format AS format, qs.netvotes AS netvotes, qs.tags as tags, qs.selchildid as selected, ans.postid as apostid, BINARY ans.content AS acontent, ans.format AS aformat, ans.userid AS auserid, ans.netvotes AS anetvotes FROM ^posts  qs ".($reqanswers?"":"left outer join")." ^posts  ans on qs.postid=ans.parentid  where qs.type='Q' ".($iscats?" AND qs.categoryid=".$cat['categoryid']:"") ." ". $incsql." ".$anssql." ".$sortsql;
+		$selectspec="SELECT qs.postid AS postid, BINARY qs.title AS title, BINARY qs.content AS content, qs.format AS format, qs.netvotes AS netvotes, qs.tags as tags, qs.selchildid as selected, ans.postid as apostid, BINARY ans.content AS acontent, ans.format AS aformat, ans.userid AS auserid, ans.netvotes AS anetvotes FROM ^posts  qs ".($reqanswers?"":"left outer join")." ^posts  ans on qs.postid=ans.parentid and qs.type='Q' and ans.type='A' where true   ".($iscats?" AND qs.categoryid=".$cat['categoryid']:"") ." ". $incsql." ".$anssql." ".$sortsql;
 
 		$qs = qa_db_read_all_assoc(
 				qa_db_query_sub(
@@ -183,7 +180,7 @@ function qa_book_plugin_createBook($return=false) {
 
 		if(empty($qs)) // no questions in this category
 			continue;
-
+		$cqcount = 0;
 		$ccount++;
 		$q2 = array();
 		foreach($qs as $q) { // group by questions
@@ -203,31 +200,32 @@ function qa_book_plugin_createBook($return=false) {
 		$answers='';//for pushing answers
 		$tcount = 0;
 		$answerblockprefix = '<h2 class="answers-block">Answers: <a class="topic-link" href="#topic[topic]">[topicname]</a></h2>';
-		$topicblockprefix = '<h2 class="topic-block" id="topic[tlink]"><a class="topic-link" href="'.qa_opt('site_url').'tag/[topicurl]">[topic]</a><a class="top-link" href=#[top-link]>top</a></div></h2>';
+		$topicblockprefix = '<div class="topic-block" id="topic[tlink]"><h2 class="top-title"><a class="topic-link" href="'.qa_opt('site_url').'tag/[topicurl]">[topic]</a></h2><a class="top-link" href=#[top-link]>top</a></div>';
 		foreach($q2 as $qs) {
 			usort($qs, "mysortanswers");
 			// toc entry
+			$cqcount++;
 			$mint = mintag($qs[0]);
 			if($mint !== $oldmint){
 				if($mint !== '' && !$shuffle)
 				{
 					if(qa_opt('book_plugin_push_a') && ($answers != '')){
-						$answerblock = str_replace("[topic]",  urlencode($oldmint), $answerblockprefix);
+						$answerblock = str_replace("[topic]",  gettag($oldmint), $answerblockprefix);
 						$answerblock = str_replace("[topicname]",  $oldmint, $answerblock);
 						$qhtml .=qa_book_answerblockprefix($oldmint,$answerblockprefix). $answers;
 						$answers='';
 					}
 					$tcount++;
-					$topicanchor= 'topic'.urlencode($mint);
+					$topicanchor= 'topic'.gettag($mint);
 					$qcount = 0;
 					$number="<div class=\"number\">".$ccount.".".$tcount."</div>";	
-					$topic = str_replace("[topic]", $number.$mint,  $topicblockprefix);	
+					$topic = str_replace("[topic]", $number.' '.$mint,  $topicblockprefix);	
 					$topic = str_replace("[topicurl]", gettag($mint),  $topic);	
-					$topic = str_replace("[tlink]", urlencode($mint),  $topic);	
+					$topic = str_replace("[tlink]", gettag($mint),  $topic);	
 					$topic = str_replace("[top-link]", $catanchor,  $topic);	
 					$qhtml .= $topic;
 					//$toc.=str_replace('[qlink]','<a href="#question'.$qs[0]['postid'].'">'.$mint.'</a>',qa_opt('book_plugin_template_toc'));
-					$toc.=str_replace('[qlink]','<a href="#topic'.urlencode($mint).'">'.$mint.'</a>',qa_opt('book_plugin_template_toc'));
+					$toc.=str_replace('[qlink]','<a href="#topic'.gettag($mint).'">'.$mint.'</a>',qa_opt('book_plugin_template_toc'));
 				}
 				else {
 					//		$toc.=str_replace('[qlink]','<a href="#question'.$qs[0]['postid'].'">'.$qs[0]['title'].'</a>',qa_opt('book_plugin_template_toc'));
@@ -239,14 +237,16 @@ function qa_book_plugin_createBook($return=false) {
 
 			$as = '';
 			$nv = false;
+			$acount= 0;
 			foreach($qs as $idx => $q) {
 				if(qa_opt('book_plugin_req_abest') && qa_opt('book_plugin_req_abest_max') && $idx >= qa_opt('book_plugin_req_abest_max'))
 					break;
 				if($nv !== false && qa_opt('book_plugin_req_abest') && $nv != $q['anetvotes']) // best answers only
 					break;
 				/*arjun*/
-				if($idx && ($q['anetvotes'] == 0))	
+				if($idx && ($q['anetvotes'] < qa_opt('book_plugin_req_av_no')))	
 					break;
+				$acount++;
 				$acontent = '';
 				if(!empty($q['acontent'])) {
 					$viewer=qa_load_viewer($q['acontent'], $q['aformat']);
@@ -323,6 +323,7 @@ function qa_book_plugin_createBook($return=false) {
 				$onea = str_replace('[qurl]','#question'.$q['postid'],$onea);
 				$onea = str_replace('[site-url]','',$onea);
 				$onea = str_replace('[question]','',$onea);
+				$onea = str_replace('[top-link]','question'.$q['postid'],$onea);
 				$onea = str_replace('[tags]', '', $onea);
 				$onea = str_replace('[hide]', 'hide', $onea);
 				$answers .= str_replace('[answers]',$as,$onea);
@@ -336,13 +337,13 @@ function qa_book_plugin_createBook($return=false) {
 		}
 
 		if($iscats) {
-			$tocout .= '<li><a href="#cat'.$cat['categoryid'].'" onclick="toggle(\'cat'.$cat['categoryid'].'Details\')" class="toc-cat">'.$cat['title'].'</a><span id="cat'.$cat['categoryid'].'Details"> <ol class="toc-ul">'.$toc.'</ol></li>';
+			$tocout .= '<li><a href="#cat'.$cat['categoryid'].'" onclick="toggle(\'cat'.$cat['categoryid'].'Details\')" class="toc-cat">'.$cat['title'].' ('.$cqcount.')'. '</a><span id="cat'.$cat['categoryid'].'Details"> <ol class="toc-ul">'.$toc.'</ol></li>';
 
 			// todo fix category link
 			$catnumber="<div class=\"number\">$ccount</div>";
 			$catout = str_replace('[cat-url]',qa_path_html('questions/'.qa_category_path_request($navcats, $cat['categoryid'])),qa_opt('book_plugin_template_category'));
 			$catout = str_replace('[cat-anchor]','cat'.$cat['categoryid'],$catout);
-			$catout = str_replace('[cat-title]',$catnumber.$cat['title'],$catout);
+			$catout = str_replace('[cat-title]',$catnumber.' '.$cat['title'].' ('.$cqcount.')',$catout);
 			$catout = str_replace('[questions]',$qhtml,$catout);
 			$qout .= $catout;
 		}
@@ -392,7 +393,7 @@ function qa_book_plugin_createBook($return=false) {
 }
 function qa_book_answerblockprefix($oldmint, $answerblockprefix)
 {
-	$answerblock = str_replace("[topic]",  urlencode($oldmint), $answerblockprefix);
+	$answerblock = str_replace("[topic]",  gettag($oldmint), $answerblockprefix);
 	return str_replace("[topicname]",  $oldmint, $answerblock);
 
 }
