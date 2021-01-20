@@ -300,7 +300,7 @@ function qa_book_plugin_createBook($return=false) {
 			foreach ($tags as $tag)
 			{
 
-				$tagshtml.="<li class=\"qa-q-view-tag-item\"> <a href=\"http://gateoverflow.in/tag/".$tag."\"    class=\"qa-tag-link\">".$tag." </a></li>";
+				$tagshtml.="<li class=\"qa-q-view-tag-item\"> <a href=\"".qa_opt("site_url")."tag/".$tag."\"    class=\"qa-tag-link\">".$tag." </a></li>";
 			}
 			if($mint !== '')
 				$mint.=": ";
